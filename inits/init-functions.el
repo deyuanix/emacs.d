@@ -3,6 +3,36 @@
 ;;------------------------------------------------------------------------------
 
 ;;------------------------------------------------------------------------------
+;; Reading layout
+;;------------------------------------------------------------------------------
+
+;;;###autoload
+(defun reading-layout ()
+  "Create a three-pane reading layout: left (~25%) | middle (~50%) | right (~25%).
+Places the current buffer in the center, *scratch* on the left, and
+prompts for an agent session to launch on the right."
+  (interactive)
+  (let* ((buf    (current-buffer))
+         (total  (window-total-width (frame-root-window)))
+         (side-w (round (* total 0.25)))
+         (mid-w  (- total (* 2 side-w))))
+    (delete-other-windows)
+    ;; Left pane
+    (split-window-right side-w)
+    (switch-to-buffer "*scratch*")
+    ;; Middle pane (reading buffer)
+    (let ((mid-win (next-window)))
+      (select-window mid-win)
+      (split-window-right mid-w)
+      (switch-to-buffer buf)
+      ;; Right pane: new agent session
+      (other-window 1)
+      (agent-tool-start (agent-tool--read-agent)
+                        (agent-tool--project-root))
+      ;; Return focus to middle
+      (select-window mid-win))))
+
+;;------------------------------------------------------------------------------
 ;; Buffer management
 ;;------------------------------------------------------------------------------
 (defun laura/kill-other-buffers ()
