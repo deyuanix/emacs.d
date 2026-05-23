@@ -31,6 +31,7 @@
           (cl-remove-if-not
            (lambda (buffer)
              (and (buffer-live-p buffer)
+                  (tabspaces--local-buffer-p buffer)
                   (with-current-buffer buffer
                     (derived-mode-p 'ghostel-mode))))
            +ghostel-buffer-list))
@@ -59,24 +60,27 @@
     (interactive "p")
     (+ghostel-switch 'prev offset))
 
-  (define-key ghostel-mode-map [f1]  #'find-file)
-  (define-key ghostel-mode-map [f2]  #'save-buffer)
-  (define-key ghostel-mode-map [f3]  #'kill-current-buffer)
-  (define-key ghostel-mode-map [f4]  #'revert-buffer)
-  (define-key ghostel-mode-map [f5]  #'tabspaces-open-or-create-project-and-workspace)
-  (define-key ghostel-mode-map [f6]  #'tabspaces-save-session)
-  (define-key ghostel-mode-map [f7]  #'laura/tabspaces-kill-workspace)
-  (define-key ghostel-mode-map [f8]  #'tab-list)
-  (define-key ghostel-mode-map [f9]  #'dirvish)
-  (define-key ghostel-mode-map [f10] #'consult-ripgrep)
-  (define-key ghostel-mode-map [f12] #'multi-vterm)
-  (define-key ghostel-mode-map (kbd "C-o")  #'consult-buffer)
-  (define-key ghostel-mode-map (kbd "C-q")  #'ghostel-copy-mode)
-  (define-key ghostel-mode-map (kbd "M-[")  #'+ghostel-prev)
-  (define-key ghostel-mode-map (kbd "M-]")  #'+ghostel-next)
-  (define-key ghostel-copy-mode-map (kbd "C-q") #'ghostel-copy-mode)
-  (define-key ghostel-copy-mode-map (kbd "M-[") #'+ghostel-prev)
-  (define-key ghostel-copy-mode-map (kbd "M-]") #'+ghostel-next)
+  ;; Bind on ghostel-semi-char-mode-map (the actual local map) to override
+  ;; the ghostel--send-event bindings set by ghostel--define-terminal-keys.
+  ;; Binding on ghostel-mode-map (the parent) is shadowed by the child map.
+  (define-key ghostel-semi-char-mode-map [f1]  #'find-file)
+  (define-key ghostel-semi-char-mode-map [f2]  #'save-buffer)
+  (define-key ghostel-semi-char-mode-map [f3]  #'kill-current-buffer)
+  (define-key ghostel-semi-char-mode-map [f4]  #'revert-buffer)
+  (define-key ghostel-semi-char-mode-map [f5]  #'tabspaces-open-or-create-project-and-workspace)
+  (define-key ghostel-semi-char-mode-map [f6]  #'tabspaces-save-session)
+  (define-key ghostel-semi-char-mode-map [f7]  #'laura/tabspaces-kill-workspace)
+  (define-key ghostel-semi-char-mode-map [f8]  #'tab-list)
+  (define-key ghostel-semi-char-mode-map [f9]  #'dirvish)
+  (define-key ghostel-semi-char-mode-map [f10] #'consult-ripgrep)
+  (define-key ghostel-semi-char-mode-map [f12] #'multi-vterm)
+  (define-key ghostel-semi-char-mode-map (kbd "C-o") #'consult-buffer)
+  (define-key ghostel-semi-char-mode-map (kbd "C-q") #'ghostel-copy-mode)
+  (define-key ghostel-semi-char-mode-map (kbd "M-[") #'+ghostel-prev)
+  (define-key ghostel-semi-char-mode-map (kbd "M-]") #'+ghostel-next)
+  (define-key ghostel-readonly-mode-map (kbd "C-q") #'ghostel-copy-mode)
+  (define-key ghostel-readonly-mode-map (kbd "M-[") #'+ghostel-prev)
+  (define-key ghostel-readonly-mode-map (kbd "M-]") #'+ghostel-next)
 
   ;; Ghostel renders terminal cells with anonymous face plists like
   ;; `(:weight bold)' and `(:foreground "#98be65")'.  `dimmer' only remaps
@@ -189,6 +193,30 @@ reliable."
   :init
   (blink-cursor-mode -1)
   :config
+  (defun +vterm-switch (direction &optional offset)
+    (let* ((ws-bufs (seq-filter
+                     (lambda (b)
+                       (and (buffer-live-p b)
+                            (tabspaces--local-buffer-p b)))
+                     multi-vterm-buffer-list))
+           (count (length ws-bufs))
+           (idx   (cl-position (current-buffer) ws-bufs))
+           (step  (if (eq direction 'next) (or offset 1) (- (or offset 1)))))
+      (cond
+       ((zerop count) (multi-vterm))
+       (idx (switch-to-buffer (nth (mod (+ idx step) count) ws-bufs)))
+       (t   (switch-to-buffer (car ws-bufs))))))
+
+  (defun +vterm-prev (&optional offset)
+    "Switch to the previous vterm in the current workspace."
+    (interactive "p")
+    (+vterm-switch 'prev offset))
+
+  (defun +vterm-next (&optional offset)
+    "Switch to the next vterm in the current workspace."
+    (interactive "p")
+    (+vterm-switch 'next offset))
+
   ;; Keymap bindings — set once on package load, not per-buffer.
   (define-key vterm-mode-map [f1]  #'find-file)
   (define-key vterm-mode-map [f2]  #'save-buffer)
@@ -203,8 +231,8 @@ reliable."
   (define-key vterm-mode-map [f12] #'multi-vterm)
   (define-key vterm-mode-map (kbd "C-o")  #'consult-buffer)
   (define-key vterm-mode-map (kbd "C-q")  #'vterm-copy-mode)
-  (define-key vterm-mode-map (kbd "M-[")  #'multi-vterm-prev)
-  (define-key vterm-mode-map (kbd "M-]")  #'multi-vterm-next)
+  (define-key vterm-mode-map (kbd "M-[")  #'+vterm-prev)
+  (define-key vterm-mode-map (kbd "M-]")  #'+vterm-next)
   (define-key vterm-mode-map (kbd "S-<return>")
     (lambda () ; Shift+Return → insert newline instead of raw return (for TUI).
       (interactive)
