@@ -29,9 +29,9 @@
 (global-set-key (kbd "M-p") #'laura/scroll-down-in-place)
 (global-set-key (kbd "M-n") #'laura/scroll-up-in-place)
 
-;; Previous/next buffer.
-(global-set-key (kbd "C-,") #'previous-buffer)
-(global-set-key (kbd "C-.") #'next-buffer)
+;; Previous/next buffer (workspace-aware).
+(global-set-key (kbd "C-,") #'laura/previous-buffer)
+(global-set-key (kbd "C-.") #'laura/next-buffer)
 
 ;; Built-in tab bar mode navigation.
 (global-set-key (kbd "s-t") #'tab-bar-new-tab)

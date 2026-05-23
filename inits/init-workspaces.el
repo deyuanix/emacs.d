@@ -92,6 +92,34 @@
                       (remove 'consult-source-tabspace consult-buffer-sources))))))
 
     (add-hook 'tabspaces-mode-hook #'laura/consult-tabspaces-setup)
-    (laura/consult-tabspaces-setup)))
+    (laura/consult-tabspaces-setup))
+
+  (defun laura/previous-buffer ()
+    "Like `previous-buffer', but skip buffers outside the current workspace."
+    (interactive)
+    (if (not (bound-and-true-p tabspaces-mode))
+        (previous-buffer)
+      (let ((start (current-buffer))
+            (n 0)
+            (limit (length (buffer-list))))
+        (previous-buffer)
+        (while (and (not (eq (current-buffer) start))
+                    (not (tabspaces--local-buffer-p (current-buffer)))
+                    (< (cl-incf n) limit))
+          (previous-buffer)))))
+
+  (defun laura/next-buffer ()
+    "Like `next-buffer', but skip buffers outside the current workspace."
+    (interactive)
+    (if (not (bound-and-true-p tabspaces-mode))
+        (next-buffer)
+      (let ((start (current-buffer))
+            (n 0)
+            (limit (length (buffer-list))))
+        (next-buffer)
+        (while (and (not (eq (current-buffer) start))
+                    (not (tabspaces--local-buffer-p (current-buffer)))
+                    (< (cl-incf n) limit))
+          (next-buffer))))))
 
 (provide 'init-workspaces)
